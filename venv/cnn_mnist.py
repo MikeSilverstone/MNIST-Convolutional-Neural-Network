@@ -7,40 +7,44 @@ import tensorflow as tf
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
+def create_convolutional_layer(previous_layer, filter_number):
+    convolutional_layer = tf.layers.conv2d(
+        inputs = previous_layer,
+        filters = filter_number,
+        kernel_size = [5, 5],
+        padding = 'same',
+        activation = tf.nn.relu
+    )
+    return convolutional_layer
+
+
+def create_pooling_layer(previous_layer):
+    pooling_layer = tf.layers.max_pooling2d(
+        inputs = previous_layer,
+        pool_size = [2, 2],
+        strides = 2,
+    )
+
+    return pooling_layer
+
+
 def cnn_model_fn(features, labels, mode):
     #Reshape input to [batch size, width, height, channels]
     input_layer = tf.reshape(features["x"], [-1, 28, 28, 1])
 
-    #Create Convolutional layer 1
-    conv1 = tf.layers.conv2d(
-        inputs = input_layer,
-        filters = 32,
-        kernel_size = [5, 5],
-        padding = "same", #Output tensor has same h & w as input
-        activation = tf.nn.relu) #Introduce non-linearity
+    #Create first convolutional layer
+    conv1 = create_convolutional_layer(previous_layer = input_layer, filter_number = 32)
 
-    #Create Pooling layer 1, reduces size of images by 50%
-    pool1 = tf.layers.max_pooling2d(
-        inputs=conv1,
-        pool_size=[2, 2], #Filter size
-        strides=2)
+    #Create first pooling layer
+    pool1 = create_pooling_layer(conv1)
 
-    #Create Convolutional layer 2
-    conv2 = tf.layers.conv2d(
-        inputs = pool1,
-        filters = 64, #Twice as many filters
-        kernel_size = [5,5],
-        padding = "same",
-        activation = tf.nn.relu)
+    #Create second convolutional layer
+    conv2 = create_convolutional_layer(pool1, 64)
 
-    #Create Pooling layer 2
-    pool2 = tf.layers.max_pooling2d(
-        inputs = conv2,
-        pool_size=[2, 2],
-        strides=2)
+    #Create second pooling layer
+    pool2 = create_pooling_layer(conv2)
 
-    #Flatten feature map (Pooling Layer 2), w/h are now 25% of original
-    #due to pooling layers, channels are now 64 due to convolutional layer filters.
+    #Flatten pooling layer
     pool2_flat = tf.reshape(pool2, [-1, 7 * 7 * 64])
 
     #Create first dense layer
@@ -49,7 +53,7 @@ def cnn_model_fn(features, labels, mode):
         units = 1024, #Number of neurons
         activation = tf.nn.relu)
 
-    #Randomly cut 40% of neurons per training pass to curb overfitting (dependency)
+    #Randomly cut 40% of neurons per training pass to curb overfitting
     dropout = tf.layers.dropout(
         inputs = dense,
         rate = 0.4,
